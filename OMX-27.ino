@@ -32,13 +32,33 @@ int temp;
 elapsedMillis msec = 0;
 elapsedMillis pots_msec = 0;
 elapsedMillis checktime1 = 0;
-elapsedMicros clksTimer = 0;
+elapsedMicros clockTimer = 0;
 unsigned long clksDelay;
-elapsedMillis step_interval[8] = {0,0,0,0,0,0,0,0};
+elapsedMicros step_interval[8] = {0,0,0,0,0,0,0,0};
 unsigned long lastStepTime[8] = {0,0,0,0,0,0,0,0};
 elapsedMillis keyPressTime[27] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 volatile unsigned long clockInterval; 
+
+
+//const int NoteEvent_size=64; //last note in array (buffer)
+//
+//typedef struct {int midiNote; int noteTime; int noteLen;} NoteEvent_t;
+//
+///* NoteEvent_tail is index in circular buffer for the first note to be removed */
+///* NoteEvent_head is index in circular buffer for the next note to be added */
+///* If NoteEvent_count == 0 then list is empty */
+///* If NoteEvent_count == NoteEvent_size then list is full */
+//
+//NoteEvent_t NoteEvent[NoteEvent_size];
+//int NoteEvent_tail = 0;
+//int NoteEvent_head = 0;  
+//int NoteEvent_count = 0;  
+//
+//bool inline NoteEventFull() {return NoteEvent_count == NoteEvent_size; };
+//bool inline NoteEventEmpty() {return NoteEvent_count == 0; };
+//int inline  NoteEventNext(int eventIndex) {return (eventIndex+1)%NoteEvent_size; };
+
 
 // ENCODER
 Encoder myEncoder(12, 11); 	// encoder pins
@@ -114,24 +134,34 @@ void readPotentimeters(){
 	}
 }
 
-// FIGURE OUT WHAT TO DO WITH CLOCK FOR NOW ???
 
 // ####### CLOCK/TIMING #######
 
-//void clockTick() {
-//  if (started) {
-//	usbMIDI.sendRealTime(usbMIDI.Clock);
-//    //MIDI.sendRealTime(midi::Clock);
-//  }
-//  currentTick++;
-//  if (currentTick == 24) {
-//    currentTick = 0;
-//  }
-//}
+void clockTick() {
+	currentTick++;
+	if (currentTick == 24) {
+		currentTick = 0;
+	}
+}
 void sendClock(void){
 	if (playing){
 		usbMIDI.sendRealTime(usbMIDI.Clock);
-	//	MIDI.sendClock();
+//		MIDI.sendClock();
+		
+		turnNotesOff();
+	
+//		Serial.println(seqPos[playingPattern]);
+		for (unsigned int i = 0; i < max_notes; i = i+1) {
+//		for (int i = noteStack_tail, count=noteStack_count; count>0; i = (i+1)%max_notes, count=count-1) {
+			if (noteStack[i].timestamp > 0 && (micros() >= noteStack[i].timestamp)){
+				if (!noteStack[i].isplaying){
+					noteStack[i].isplaying = true;
+					playStep(noteStack[i]);
+					Serial.print (noteStack[i].note);
+					Serial.println(" play note");
+				} 
+			}
+		}
 	}
 }
 void startClock(){
@@ -144,21 +174,16 @@ void stopClock(){
 }
 void resetClocks(){
 	// BPM tempo to step_delay calculation
-	clockInterval = 60000000/(PPQ * clockbpm); // interval is in microseconds
+	clockInterval = 60000000/(PPQ * clockbpm);	// clock pulse interval is in microseconds
+	step_micros = 60000000/clockbpm/4; 			// 16th note step in microseconds
 	FrequencyTimer2::setPeriod(clockInterval);
 
 	// 16th notes
-	step_delay = clockInterval * 0.006; // 60000 / clockbpm / 4; 
+	step_delay = clockInterval * 0.006; // 60000 / clockbpm / 4;  // millis
 
 	// BPM to clock pulses
 	//clksDelay = FrequencyTimer2::getPeriod(); // (60000000 / clockbpm) / 24;
-
 }
-
-//long calcTempoMicros() {
-//  long tempoMicros = (60 * 1000000) / (tempo * PPQ);
-//  return tempoMicros;
-//}
 
 
 
@@ -167,15 +192,23 @@ void resetClocks(){
 void setup() {
 	Serial.begin(115200);
 	checktime1 = 0;
-	clksTimer = 0;
+	clockTimer = 0;
+
+//	FrequencyTimer2::setPeriod(clockInterval); // interval set in resetClocks()
 	resetClocks();
 	
 	// set the FrequencyTimer2 for clock
-//	FrequencyTimer2::setPeriod(clockInterval);
 	FrequencyTimer2::setOnOverflow(sendClock); 
 	FrequencyTimer2::enable();
-  
-  	// (long)FrequencyTimer2::getPeriod();
+	
+	// initialize patterns
+//	for (int i = 0; i < max_tracks; i = i + 1) { 
+//		pattern[i] = (pattern_specs) {midiChannel,16,1.0,1,false}; // channel, patt length, mult, start, mute;
+//	}	
+	for (unsigned int i = 0; i < max_notes; i = i+1) {
+		noteStack[i].isplaying = false;
+	}
+
 
 	// set analog read resolution to teensy's 13 usable bits
 	analogReadResolution(13);
@@ -427,8 +460,22 @@ void step_ahead(int patternNum) {
 void step_on(int patternNum){
 	//	Serial.print(g);
 	//	Serial.println(" step on");
-	playNote(playingPattern);
+	// playNote(patternNum);
 
+	//{notenum,vel,len,p1,p2,p3,p4,p5}
+	if (stepPlay[patternNum][seqPos[patternNum]] == 1){
+		note_type eventStack = {stepNoteP[patternNum][seqPos[patternNum]][0], 
+				stepNoteP[patternNum][seqPos[patternNum]][1], 
+				1, 
+				stepNoteP[patternNum][seqPos[patternNum]][2]*step_micros,
+				stepNoteP[patternNum][seqPos[patternNum]][3],
+				stepNoteP[patternNum][seqPos[patternNum]][4],
+				stepNoteP[patternNum][seqPos[patternNum]][5],
+				stepNoteP[patternNum][seqPos[patternNum]][6],
+				stepNoteP[patternNum][seqPos[patternNum]][7],
+				micros()};
+		addEvent(eventStack);
+	}
 }
 
 void step_off(int patternNum, int position){
@@ -737,7 +784,7 @@ void dispNotes(){
 void loop() {
 	customKeypad.tick();
 	checktime1 = 0;
-	
+		
 	// DISPLAY SETUP
 	display.clearDisplay();
 
@@ -1226,8 +1273,12 @@ void loop() {
 				}
 			}
 			if(playing == true) {
-				// step timing
-				if(step_interval[playingPattern] >= step_delay){
+			
+				// ############## STEP TIMING ##############
+
+					// FIGURE OUT TIMING
+					
+				if(step_interval[playingPattern] >= step_micros){
 					
 					// Do stuff
 					
@@ -1240,6 +1291,7 @@ void loop() {
 					lastStepTime[playingPattern] = step_interval[playingPattern];
 					
 					step_on(playingPattern);
+					
 					show_current_step(playingPattern);
 					step_ahead(playingPattern);
 					step_interval[playingPattern] = 0;
@@ -1255,11 +1307,16 @@ void loop() {
 
 		case 2: 						// ############## SEQUENCER 2
 			if (dirtyDisplay){			// DISPLAY
-				if (noteSelect) {
-					dispNoteSelect();
-				} else {
-					dispPattLen();
-					dispTempo();		
+				if (!enc_edit){
+					if (!noteSelect and !patternParams){
+						dispSeqMode1();
+					}				
+					if (noteSelect) {
+						dispNoteSelect();
+					}
+					if (patternParams) {
+						dispPatternParams();
+					}
 				}
 			}
 			if(playing == true) {
@@ -1269,7 +1326,7 @@ void loop() {
 					
 					if (!patternMute[j]) {
 					
-						if(step_interval[j] >= step_delay){
+						if(step_interval[j] >= step_micros){
 							int lastPos = (seqPos[j]+15) % 16;
 							if (lastNote[j][lastPos] > 0){
 								step_off(j, lastPos);

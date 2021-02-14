@@ -3,7 +3,7 @@
 // the MIDI channel number to send messages
 const int midiChannel = 1;
 
-int ticks = 0;            // A tick of the clock
+int currentTick = 0;            // A tick of the clock
 bool clockSource = 0;     // Internal clock (0), external clock (1)
 bool playing = 0;         // Are we playing?
 bool paused = 0;          // Are we paused?
@@ -24,6 +24,41 @@ bool patternMute[8] = {false, false, false, false, false, false, false, false};
 int patternLength[8] = {16, 16, 16, 16, 16, 16, 16, 16};
 int patternStart[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 int pattLen[8] = {patternLength[0],patternLength[1],patternLength[2],patternLength[3],patternLength[4],patternLength[5],patternLength[6],patternLength[7]};
+
+volatile unsigned long step_micros; 
+
+const byte max_tracks = 8;
+typedef struct pattern_specs {
+	int channel;
+	int length;
+	float mult;
+	int start;
+	bool mute;
+  } pattern_specs;
+  pattern_specs pattern[max_tracks];
+
+//{notenum,vel,len,p1,p2,p3,p4,p5}
+const unsigned int max_notes = 64;
+typedef struct note_type {
+	int note;
+	int velocity;
+	unsigned long length;     
+	int channel;      
+	int plock[5];      
+	unsigned long timestamp;
+	unsigned int id;
+	bool isplaying;
+  }  note_type;
+  note_type noteStack[max_notes];
+
+int noteStack_tail = 0;
+int noteStack_head = 0;  
+int noteStack_count = 0;  
+
+bool inline noteStackFull() {return noteStack_count == max_notes; };
+bool inline noteStackEmpty() {return noteStack_count == 0; };
+int inline  noteStackNext(int eventIndex) {return (eventIndex+1)%max_notes; };
+
 
 // bool plocks[16];
 
@@ -132,7 +167,7 @@ void seqPause() {
 }
 
 void seqStop() {
-  ticks = 0;
+  currentTick = 0;
   // seqPos = 0;
   playing = 0;
   paused = 0;
@@ -140,6 +175,118 @@ void seqStop() {
   seqLedRefresh = 1;
 }
 
+///// 
+
+void note_off(int midiNote, int midiChan){
+ 	Serial.print(midiNote);
+	Serial.println(" note off");
+		usbMIDI.sendNoteOff(midiNote, 0, midiChan);
+		MIDI.sendNoteOff(midiNote, 0, midiChan);
+		analogWrite(CVPITCH_PIN, 0);
+		digitalWrite(CVGATE_PIN, LOW);
+}
+
+////turn off notes that have been on for more than noteLength
+void turnNotesOff() {
+// 	unsigned long nowTime = micros();
+
+	for (unsigned int i = 0; i < max_notes; i = i+1) {
+		if (noteStack[i].isplaying){
+// 		if (noteStack[i].id == i){
+
+// 			Serial.print("id: ");
+// 			Serial.println(noteStack[i].id);
+// 			Serial.print("timestamp: ");
+// 			Serial.println(noteStack[i].timestamp);
+// 			Serial.print("nowTime: ");
+// 			Serial.println(micros());
+// 			Serial.print("adj: ");
+// 			Serial.println(micros() - noteStack[i].timestamp);
+
+			if ((noteStack_count > 0) && (micros() - noteStack[i].timestamp) >= noteStack[i].length) {
+				note_off(noteStack[i].note, noteStack[i].channel);
+				noteStack[i].isplaying = false;
+				noteStack_count -= 1;
+				noteStack_tail = (noteStack_tail+1) % max_notes;
+			}
+		}	
+// 		}	
+	}
+}
+//
+////check if note has been played recently without being turned off
+int isNotePlaying(int playingNote) {
+	for (int i = noteStack_tail, count=noteStack_count; count>0; i = (i+1)%max_notes, count=count-1) {
+		if (noteStack[i].note == playingNote ) return 1;
+	}
+	return 0;
+}
+
+/*
+void addEvent(int newNote, int newVel, int newChan, unsigned long newLen, int p1, int p2, int p3, int p4, int p5, unsigned long tmstmp) {
+	if (noteStackFull()) { // Buffer full, remove oldest, noteStack_tail 
+		noteStack_count -= 1;
+		noteStack_tail = (noteStack_tail+1) % max_notes; 
+	}
+	Serial.print("add note ");
+	Serial.println(newNote);
+
+	noteStack[noteStack_head].note = newNote;
+	noteStack[noteStack_head].velocity = newVel;
+	noteStack[noteStack_head].length = newLen;
+	noteStack[noteStack_head].channel = newChan;
+	noteStack[noteStack_head].plock[0] = p1;
+	noteStack[noteStack_head].plock[1] = p2;
+	noteStack[noteStack_head].plock[2] = p3;
+	noteStack[noteStack_head].plock[3] = p4;
+	noteStack[noteStack_head].plock[4] = p5;
+	noteStack[noteStack_head].timestamp = tmstmp;
+	noteStack[noteStack_head].id = noteStack_head;
+	noteStack[noteStack_head].isplaying = false;
+
+	noteStack_count += 1;	
+	noteStack_head=(noteStack_head+1)%max_notes;
+
+}
+*/
+void addEvent(note_type eventStack) {
+	if (noteStackFull()) { /* Buffer full, remove oldest, noteStack_tail */
+		noteStack_count -= 1;
+		noteStack_tail = (noteStack_tail+1) % max_notes; 
+	}
+
+	noteStack[noteStack_head] = eventStack;
+
+	noteStack_count += 1;	
+	noteStack_head=(noteStack_head+1)%max_notes;
+
+}
+
+void playStep(note_type thisStack) {
+
+	seq_velocity = thisStack.velocity;
+	Serial.print("seq_velocity ");
+	Serial.println(seq_velocity);
+	usbMIDI.sendNoteOn(thisStack.note, thisStack.velocity, thisStack.channel);
+	MIDI.sendNoteOn(thisStack.note, thisStack.velocity, thisStack.channel);
+	//Serial.println();
+
+	// send param locks // {notenum,vel,len,p1,p2,p3,p4,p5}
+	for (int q=0; q<4; q++){	
+		int tempCC = thisStack.plock[q];
+		if (tempCC > -1) {
+			usbMIDI.sendControlChange(pots[q],tempCC,thisStack.channel);
+			prevPlock[q] = tempCC;
+		} else if (prevPlock[q] != potValues[q]) {
+			usbMIDI.sendControlChange(pots[q],potValues[q],thisStack.channel);
+			prevPlock[q] = potValues[q];
+		}
+	}
+	stepCV = map (thisStack.note, 35, 90, 0, 4096);
+	digitalWrite(CVGATE_PIN, HIGH);
+	analogWrite(CVPITCH_PIN, stepCV);
+
+}
 // Play a note
 void playNote(int patternNum) {
   //Serial.println(stepNoteP[patternNum][seqPos][0]); // Debug
@@ -152,7 +299,7 @@ void playNote(int patternNum) {
     case 0:
       // Don't play a note
       // Turn off the previous note
-//       usbMIDI.sendNoteOff(lastNote[patternNum], 0, midiChannel);
+//       usbMIDI.sendg(lastNote[patternNum], 0, midiChannel);
 //       MIDI.sendNoteOff(lastNote[patternNum], 0, midiChannel);
 //       analogWrite(CVPITCH_PIN, 0);
 //       digitalWrite(CVGATE_PIN, LOW);
