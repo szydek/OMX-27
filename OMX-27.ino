@@ -608,11 +608,11 @@ void dispGenericMode(int submode, int selected){
 			break;
 		case SUBMODE_PATTPARAMS3:
 			legends[0] = "RATE";
-			legends[1] = "---";
+			legends[1] = "FLLW";
 			legends[2] = "---";
 			legends[3] = "---";
-			legendVals[0] = patternSettings[playingPattern].clockDivMultP + 1;			// STRT step to autoreset on
-			legendVals[1] = 0;			// STP step to autoreset on - 0 = no auto reset
+			legendVals[0] = patternSettings[playingPattern].clockDivMultP + 1;		// STEP RATE
+			legendVals[1] = patternSettings[playingPattern].pattToFollow + 1;		// FLLW 
 			legendVals[2] = 0; 			// FRQ to autoreset on -- every x cycles
 			legendVals[3] = 0;			// PRO probability of resetting 0=NEVER 1=Always 2=50%
 			break;
@@ -1295,8 +1295,12 @@ void loop() {
 							patternSettings[playingPattern].channel = constrain(patternSettings[playingPattern].channel + amt, 0, 15);
 						}
 
-						if (ppmode3 == 0) { 					// SET AUTO RESET PROB	
+						if (ppmode3 == 0) { 					// SET ClockDiv RATE	
 							patternSettings[playingPattern].clockDivMultP = constrain(patternSettings[playingPattern].clockDivMultP + amt, 0, 15); // set clock div/mult
+						}
+
+						if (ppmode3 == 1) { 					// SET PATTERN TO FOLLOW
+							patternSettings[playingPattern].pattToFollow = constrain(patternSettings[playingPattern].pattToFollow + amt, 0, 7); // set clock div/mult
 						}
 
 						// Pattern Params Page 2
@@ -2097,21 +2101,38 @@ void doStep() {
 						if(j == playingPattern){  // only trigger reset for current sequence
 							seqReset();
 						}
-						timePerPattern[j].lastStepTimeP = timePerPattern[j].nextStepTimeP;
-						timePerPattern[j].nextStepTimeP += ((step_micros-1)*(patternSettings[j].clockDivMultP+1)); // calc step based on rate
-						// only play if not muted
-						if (!patternSettings[j].mute) {
-							timePerPattern[j].lastPosP = (seqPos[j]+15) % 16;
-							if (lastNote[j][timePerPattern[j].lastPosP] > 0){
-								step_off(j, timePerPattern[j].lastPosP);
+						if {j == PatternSettings[j].pattToFollow }{ // normal self pattern follow
+							timePerPattern[j].lastStepTimeP = timePerPattern[j].nextStepTimeP;
+							timePerPattern[j].nextStepTimeP += ((step_micros-1)*(patternSettings[j].clockDivMultP+1)); // calc step based on rate
+							if (!patternSettings[j].mute) {
+								timePerPattern[j].lastPosP = (seqPos[j]+15) % 16;
+								if (lastNote[j][timePerPattern[j].lastPosP] > 0){
+									step_off(j, timePerPattern[j].lastPosP);
+								}
+								playNote(j);
 							}
-							playNote(j);
+							if(j == playingPattern){ // only show selected pattern
+								show_current_step(j);
+								// step_ahead(j);	// old step ahead with all in sync
+							}
+							new_step_ahead(j);
+						} else { // follow the scheduling of from another
+							// only schedule if leader pattern is not muted
+							timePerPattern[j].lastStepTimeP = timePerPattern[patternSettings[j].pattToFollow].nextStepTimeP; // follow other pattern
+							timePerPattern[j].nextStepTimeP += ((step_micros-1)*(patternSettings[j].clockDivMultP+1)); // calc step based on rate							
+							if (!patternSettings[j].mute) {
+								timePerPattern[j].lastPosP = (seqPos[j]+15) % 16;
+								if (lastNote[j][timePerPattern[j].lastPosP] > 0){
+									step_off(j, timePerPattern[j].lastPosP);
+								}
+								playNote(j);
+							}
+							if(j == playingPattern){ // only show selected pattern
+								show_current_step(j);
+								// step_ahead(j);	// old step ahead with all in sync
+							}
+							new_step_ahead(j);
 						}
-						if(j == playingPattern){ // only show selected pattern
-							show_current_step(j);
-							// step_ahead(j);	// old step ahead with all in sync
-						}
-						new_step_ahead(j);
 					}
 				}
 

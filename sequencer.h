@@ -42,6 +42,7 @@ struct PatternSettings {  // 5 bytes
   uint8_t current_cycle : 4; // tracking current cycle of autoreset counter / start it at 1
   uint8_t rndstep : 4; // for random autostep functionality
   uint8_t clockDivMultP : 4;
+  uint8_t pattToFollow : 4;
   uint8_t swing : 3;
   bool reverse : 1;
   bool mute : 1;
@@ -49,14 +50,14 @@ struct PatternSettings {  // 5 bytes
 }; // 6 bytes
 
 PatternSettings patternSettings[NUM_PATTERNS] = { 
-  { 15, 0, 0, 0, 0, 0, 1, 3, 1, 0, false, false, false },
-  { 15, 1, 0, 0, 0, 0, 1, 3, 1, 0, false, false, false },
-  { 15, 2, 0, 0, 0, 0, 1, 3, 1, 0, false, false, false },
-  { 15, 3, 0, 0, 0, 0, 1, 3, 1, 0, false, false, false },
-  { 15, 4, 0, 0, 0, 0, 1, 3, 1, 0, false, false, false },
-  { 15, 5, 0, 0, 0, 0, 1, 3, 1, 0, false, false, false },
-  { 15, 6, 0, 0, 0, 0, 1, 3, 1, 0, false, false, false },
-  { 15, 7, 0, 0, 0, 0, 1, 3, 1, 0, false, false, false }
+  { 15, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, false, false, false },
+  { 15, 1, 0, 0, 0, 0, 1, 1, 1, 2, 0, false, false, false },
+  { 15, 2, 0, 0, 0, 0, 1, 1, 1, 3, 0, false, false, false },
+  { 15, 3, 0, 0, 0, 0, 1, 1, 1, 4, 0, false, false, false },
+  { 15, 4, 0, 0, 0, 0, 1, 1, 1, 5, 0, false, false, false },
+  { 15, 5, 0, 0, 0, 0, 1, 1, 1, 6, 0, false, false, false },
+  { 15, 6, 0, 0, 0, 0, 1, 1, 1, 7, 0, false, false, false },
+  { 15, 7, 0, 0, 0, 0, 1, 1, 1, 8, 0, false, false, false }
 };
 
 struct TimePerPattern {

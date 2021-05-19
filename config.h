@@ -20,8 +20,8 @@ const uint8_t EEPROM_VERSION = 5;
 #define EEPROM_PATTERN_ADDRESS 	     32
 #define EEPROM_PATTERN_SIZE		     1024      // 8 * 16 * sizeof(StepNote))
 #define EEPROM_PATTERN_SETTINGS_ADDRESS 1056
-#define EEPROM_PATTERN_SETTINGS_SIZE      48      // 8 * sizeof(PatternSettings)
-// next address 1104 (was 1096 before clock)
+#define EEPROM_PATTERN_SETTINGS_SIZE      52      // 8 * sizeof(PatternSettings)
+// next address 1108 (was 1096 before clock + fllw)
 
 // DEFINE CC NUMBERS FOR POTS // CCS mapped to Organelle Defaults
 const int CC1 = 21;
