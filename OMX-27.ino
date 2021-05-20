@@ -1682,7 +1682,9 @@ void doStep() {
 							}
 							playNote(j);
 						}
-						show_current_step(playingPattern);
+						if(j == playingPattern){ // only show selected pattern
+							show_current_step(playingPattern);
+						}
 						new_step_ahead(j);
 					}
 				}
