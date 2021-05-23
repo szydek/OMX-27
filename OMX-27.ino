@@ -583,7 +583,7 @@ void dispGenericMode(int submode, int selected){
 			legends[3] = "BPM";
 			legendVals[0] = playingPattern+1;
 			legendVals[1] = (int)transpose;
-			legendVals[2] = (int)swing; //(int)transpose;
+			legendVals[2] = (int)patternSettings[playingPattern].swing; //(int)swing; 
 			legendVals[3] = (int)clockbpm;
 			break;
 		case SUBMODE_SEQ2:
@@ -876,7 +876,7 @@ void loop() {
 
 					} else if (sqmode == 2){ 
 						// set swing
-						int newswing = constrain(swing + amt, 0, maxswing);
+						int newswing = constrain(patternSettings[playingPattern].swing + amt, 0, maxswing);
 						swing = newswing;
 						patternSettings[playingPattern].swing = newswing;
 //						setGlobalSwing(newswing);
@@ -1214,19 +1214,16 @@ void loop() {
 							if (keyState[1] && !keyState[2]) { 	
 								copyPattern(playingPattern);
 								infoDialog[COPY].state = true; // copied flag
-//								dialogFlags[0] = true; // copied flag
-								Serial.print("copy: ");
-								Serial.println(playingPattern);
+//								Serial.print("copy: ");
+//								Serial.println(playingPattern);
 							} else if (!keyState[1] && keyState[2]) {
 								pastePattern(playingPattern);
 								infoDialog[PASTE].state = true; // pasted flag
-//								dialogFlags[1] = true; // pasted flag
-								Serial.print("paste: ");
-								Serial.println(playingPattern);							
+//								Serial.print("paste: ");
+//								Serial.println(playingPattern);							
 							} else if (keyState[1] && keyState[2]) {
 								clearPattern(playingPattern);
 								infoDialog[CLEAR].state = true; // cleared flag
-//								dialogFlags[2] = true; // cleared flag
 							}
 						
 							dirtyDisplay = true;
@@ -1266,8 +1263,8 @@ void loop() {
 							
 							// If KEY 1 is down + pattern and not playing = STEP RECORD
 							if (keyState[1] && !playing) { 		
-								Serial.print("step record on - pattern: ");
-								Serial.println(thisKey-3);
+//								Serial.print("step record on - pattern: ");
+//								Serial.println(thisKey-3);
 								playingPattern = thisKey-3;
 								seqPos[playingPattern] = 0;
 								stepRecord = true;
@@ -1942,9 +1939,7 @@ void rotatePattern(int patternNum, int rot) {
 		return;
 	int size = PatternLength(patternNum);
 	StepNote arr[size];
-	//rot = rot % size;
 	rot = (rot + size) % size;
-//	Serial.println(rot);
 	for (int d = rot, s = 0; s < size; d = (d+1) % size, ++s)
 		arr[d] = stepNoteP[patternNum][s];
 	for (int i = 0; i < size; ++i)
