@@ -1836,7 +1836,8 @@ void playNote(int patternNum) {
 		}*/
 
 		if (seqPos[patternNum] % 2 == 0){
-			noteon_micros = micros() + (ppqInterval/2 * patternSettings[patternNum].swing);
+			// quick test
+				noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * (.02 * patternSettings[patternNum].swing)); 
 		} else {
 			noteon_micros = micros();
 		}
