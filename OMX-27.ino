@@ -128,7 +128,8 @@ unsigned long blinkInterval = clockbpm * 2;
 unsigned long longPressInterval = 1500;
 
 uint8_t swing = 0;
-uint8_t maxswing = 10;
+const int maxswing = 10;
+int swing_values[maxswing] = {0, 52, 54, 58, 62, 66, 68, 70, 72, 75 };
 
 bool keyState[27] = {false};
 int midiKeyState[27] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
@@ -583,7 +584,8 @@ void dispGenericMode(int submode, int selected){
 			legends[3] = "BPM";
 			legendVals[0] = playingPattern+1;
 			legendVals[1] = (int)transpose;
-			legendVals[2] = (int)patternSettings[playingPattern].swing; //(int)swing; 
+			// legendVals[2] = (int)patternSettings[playingPattern].swing; //(int)swing; 
+			legendVals[2] =  swing_values[patternSettings[playingPattern].swing]; 
 			legendVals[3] = (int)clockbpm;
 			break;
 		case SUBMODE_SEQ2:
@@ -876,7 +878,7 @@ void loop() {
 
 					} else if (sqmode == 2){ 
 						// set swing
-						int newswing = constrain(patternSettings[playingPattern].swing + amt, 0, maxswing);
+						int newswing = constrain(patternSettings[playingPattern].swing + amt, 0, maxswing-1); // -1 to deal with display values
 						swing = newswing;
 						patternSettings[playingPattern].swing = newswing;
 //						setGlobalSwing(newswing);
@@ -1832,13 +1834,12 @@ void playNote(int patternNum) {
 			noteon_micros = micros();
 		}*/
 
-		if ((seqPos[patternNum]+1) % 2 == 0){
-			// quick test
-				noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * (.02 * patternSettings[patternNum].swing)); 
+		if (((seqPos[patternNum]+1) % 2 == 0) && (swing_values[patternSettings[patternNum].swing] > 50) ){ // i.e., 50% = no swing
+				// noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * (.033 * patternSettings[patternNum].swing)); 
+				noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * ((swing_values[patternSettings[patternNum].swing]-50)* .01) ); 
 		} else {
 			noteon_micros = micros();
-		}
-		
+		}	
 			
 		pendingNoteOns.insert(stepNoteP[patternNum][seqPos[patternNum]].note, seq_velocity, PatternChannel(patternNum), noteon_micros, sendnoteCV );
 	
