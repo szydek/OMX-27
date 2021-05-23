@@ -128,7 +128,7 @@ unsigned long blinkInterval = clockbpm * 2;
 unsigned long longPressInterval = 1500;
 
 uint8_t swing = 0;
-uint8_t maxswing = 5;
+uint8_t maxswing = 10;
 
 bool keyState[27] = {false};
 int midiKeyState[27] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
@@ -1829,11 +1829,18 @@ void playNote(int patternNum) {
 //Serial.print(":");
 //Serial.println(patternSettings[patternNum].swing);
 
-		if ((patternSettings[patternNum].swing != 0) && (seqPos[patternNum] % 2 == 0)) {
+		/*if ((patternSettings[patternNum].swing != 0) && (seqPos[patternNum] % 2 == 0)) {
 			noteon_micros = micros() + (ppqInterval/2 * patternSettings[patternNum].swing); // constrain(swing, 0, 5);
 		} else {
 			noteon_micros = micros();
+		}*/
+
+		if (seqPos[patternNum] % 2 == 0){
+			noteon_micros = micros() + (ppqInterval/2 * patternSettings[patternNum].swing);
+		} else {
+			noteon_micros = micros();
 		}
+		
 			
 		pendingNoteOns.insert(stepNoteP[patternNum][seqPos[patternNum]].note, seq_velocity, PatternChannel(patternNum), noteon_micros, sendnoteCV );
 	
