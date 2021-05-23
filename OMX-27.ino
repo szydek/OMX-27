@@ -1582,13 +1582,17 @@ void auto_reset(int p){
 	   (patternSettings[p].autoreset && (patternSettings[p].autoresetstep > (patternSettings[p].startstep) ) && (seqPos[p] >= patternSettings[p].autoresetstep)) ||
 	   (patternSettings[p].autoreset && (patternSettings[p].autoresetstep == 0 ) && (seqPos[p] >= patternSettings[p].rndstep)) ||
 	   (patternSettings[p].reverse && (seqPos[p] < 0)) || // normal reverse reset
-	   (patternSettings[p].reverse && patternSettings[p].autoreset && (seqPos[p] < (patternSettings[p].startstep))) ||
-	   (patternSettings[p].reverse && patternSettings[p].autoreset && (patternSettings[p].autoresetstep == 0 ) && (seqPos[p] >= patternSettings[p].rndstep)) 
+	   (patternSettings[p].reverse && patternSettings[p].autoreset && (seqPos[p] < patternSettings[p].startstep )) // ||
+	   //(patternSettings[p].reverse && patternSettings[p].autoreset && (patternSettings[p].autoresetstep == 0 ) && (seqPos[p] < patternSettings[p].rndstep)) 
 	   ) {
 
 		if (patternSettings[p].reverse) {
 			if (patternSettings[p].autoreset){
-				seqPos[p] = patternSettings[p].autoresetstep-1; // resets pattern in REV	
+				if (patternSettings[p].autoresetstep == 0){
+					seqPos[p] = patternSettings[p].rndstep-1;
+				}else{
+					seqPos[p] = patternSettings[p].autoresetstep-1; // resets pattern in REV
+				}	
 			} else {
 				seqPos[p] = (PatternLength(p)-patternSettings[p].startstep)-1;
 			}
