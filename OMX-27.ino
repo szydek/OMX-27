@@ -1649,7 +1649,8 @@ void doStep() {
 		case MODE_S1:
 			if(playing) {
 				// ############## STEP TIMING ##############
-				if(micros() >= nextStepTime){
+//				if(micros() >= nextStepTime){
+				if(micros() >= timePerPattern[playingPattern].nextStepTimeP){
 					seqReset();
 					// DO STUFF
 
