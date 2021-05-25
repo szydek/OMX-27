@@ -1857,7 +1857,7 @@ void playNote(int patternNum) {
 		}	
 */
 
-		if (seqPos[patternNum] % 2 == 0){ // i.e., 50% = no swing
+		if ((seqPos[patternNum]+1) % 2 == 0){ // i.e., 50% = no swing
 				// noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * (.033 * patternSettings[patternNum].swing)); //original concept
 				if (patternSettings[patternNum].swing < 50){
 					noteon_micros = micros() + ((ppqInterval * multValues[patternSettings[patternNum].clockDivMultP])/2 * patternSettings[patternNum].swing); // early swing
@@ -1865,7 +1865,7 @@ void playNote(int patternNum) {
 				} else if ((patternSettings[patternNum].swing > 50) && (patternSettings[patternNum].swing < 99)){
 				   noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * ((patternSettings[patternNum].swing - 50)* .01) ); // late swing
 				} else if (patternSettings[patternNum].swing == 99){ // drunken swing
-					rnd_swing = rand() % 45 + 45; // rand 45 - 90 // randomly apply swing value / weighted toward long swing
+					rnd_swing = rand() % 95 + 1; // rand 1 - 95 // randomly apply swing value 
 					if (rnd_swing < 50){
 						noteon_micros = micros() + ((ppqInterval * multValues[patternSettings[patternNum].clockDivMultP])/2 * patternSettings[patternNum].swing);
 					} else {
