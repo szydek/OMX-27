@@ -128,8 +128,10 @@ unsigned long blinkInterval = clockbpm * 2;
 unsigned long longPressInterval = 1500;
 
 uint8_t swing = 0;
-const int maxswing = 10;
-int swing_values[maxswing] = {0, 1, 3, 5, 52, 66, 70, 72, 80, 99 }; // 0 = off, <50 early swing , >50 late swing, 99=drunken swing
+// for testing specific values
+const int maxswing = 100;
+// int swing_values[maxswing] = {0, 1, 3, 5, 52, 66, 70, 72, 80, 99 }; // 0 = off, <50 early swing , >50 late swing, 99=drunken swing
+// int swing_values[maxswing] = {};
 
 bool keyState[27] = {false};
 int midiKeyState[27] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
@@ -584,8 +586,8 @@ void dispGenericMode(int submode, int selected){
 			legends[3] = "BPM";
 			legendVals[0] = playingPattern+1;
 			legendVals[1] = (int)transpose;
-			// legendVals[2] = (int)patternSettings[playingPattern].swing; //(int)swing; 
-			legendVals[2] =  swing_values[patternSettings[playingPattern].swing]; 
+			legendVals[2] = (int)patternSettings[playingPattern].swing; //(int)swing; 
+			// legendVals[2] =  swing_values[patternSettings[playingPattern].swing]; 
 			legendVals[3] = (int)clockbpm;
 			break;
 		case SUBMODE_SEQ2:
@@ -1834,7 +1836,7 @@ void playNote(int patternNum) {
 		} else {
 			noteon_micros = micros();
 		}*/
-
+/* // USING PREDEFINED SWING VALUES
 		if (seqPos[patternNum] % 2 == 0){ // i.e., 50% = no swing
 				// noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * (.033 * patternSettings[patternNum].swing)); //original concept
 				if (swing_values[patternSettings[patternNum].swing] < 50){
@@ -1853,6 +1855,27 @@ void playNote(int patternNum) {
 		} else {
 			noteon_micros = micros();
 		}	
+*/
+
+		if (seqPos[patternNum] % 2 == 0){ // i.e., 50% = no swing
+				// noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * (.033 * patternSettings[patternNum].swing)); //original concept
+				if (patternSettings[patternNum].swing < 50){
+					noteon_micros = micros() + ((ppqInterval * multValues[patternSettings[patternNum].clockDivMultP])/2 * patternSettings[patternNum].swing); // early swing
+					// noteon_micros = (micros() - (step_micros * multValues[patternSettings[patternNum].clockDivMultP])) - ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * (swing_values[patternSettings[patternNum].swing]* .01) ); // early swing / 0 = none
+				} else if ((patternSettings[patternNum].swing > 50) && (patternSettings[patternNum].swing < 99)){
+				   noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * ((patternSettings[patternNum].swing - 50)* .01) ); // late swing
+				} else if (patternSettings[patternNum].swing == 99){ // drunken swing
+					rnd_swing = rand() % 45 + 45; // rand 45 - 90 // randomly apply swing value / weighted toward long swing
+					if (rnd_swing < 50){
+						noteon_micros = micros() + ((ppqInterval * multValues[patternSettings[patternNum].clockDivMultP])/2 * patternSettings[patternNum].swing);
+					} else {
+						noteon_micros = micros() + ((step_micros * multValues[patternSettings[patternNum].clockDivMultP]) * ((rnd_swing- 50)* .01) ); 
+					}
+				}
+		} else {
+			noteon_micros = micros();
+		}	
+
 			
 		pendingNoteOns.insert(stepNoteP[patternNum][seqPos[patternNum]].note, seq_velocity, PatternChannel(patternNum), noteon_micros, sendnoteCV );
 	
