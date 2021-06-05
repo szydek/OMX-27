@@ -990,7 +990,7 @@ void loop() {
 							patternSettings[playingPattern].autoresetfreq = constrain(patternSettings[playingPattern].autoresetfreq + amt, 0, 15); // max every 16 times
 						}	
 						if (ppmode2 == 3) { 					// SET AUTO RESET PROB	
-							patternSettings[playingPattern].autoresetprob = constrain(patternSettings[playingPattern].autoresetprob + amt, 0, 3); // never, 100% - 33%
+							patternSettings[playingPattern].autoresetprob = constrain(patternSettings[playingPattern].autoresetprob + amt, 0, 100); // 0-100%
 						}						
 						
 					} else if (stepRecord && !enc_edit){	// STEP RECORD MODE
@@ -1668,7 +1668,7 @@ bool probResult(int probSetting){
  	if (probSetting == 0){
  		return false;
  	}
- 	if((rand() % probSetting)==0){
+ 	if((rand() % 100) < probSetting){ // assumes probSetting is a range 0-100
  		return true;
  	} else {
  		return false;
