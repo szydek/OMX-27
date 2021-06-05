@@ -1889,7 +1889,6 @@ void playNote(int patternNum) {
 		}*/
 
 		if (seqPos[patternNum] % 2 == 0){
-//		if ((seqPos[patternNum]+1) % 2 == 0){	// why is/was this +1
 
 			if (patternSettings[patternNum].swing < 99){
 				noteon_micros = micros() + ((ppqInterval * multValues[patternSettings[patternNum].clockDivMultP])/(PPQ / 24) * patternSettings[patternNum].swing); // full range swing					
@@ -1906,9 +1905,10 @@ void playNote(int patternNum) {
 			noteon_micros = micros();
 		}		
 
-		// Queue note-on
-		pendingNoteOns.insert(stepNoteP[patternNum][seqPos[patternNum]].note, seq_velocity, PatternChannel(patternNum), noteon_micros, sendnoteCV );
-	
+		// Queue note-on based on probability
+		if (probResult(stepNoteP[patternNum][seqPos[patternNum]].prob)){
+			pendingNoteOns.insert(stepNoteP[patternNum][seqPos[patternNum]].note, seq_velocity, PatternChannel(patternNum), noteon_micros, sendnoteCV );
+		}
 		// {notenum, vel, notelen, step_type, {p1,p2,p3,p4}, prob}
 		// send param locks 
 		for (int q=0; q<4; q++){	
