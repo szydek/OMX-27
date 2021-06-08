@@ -1724,7 +1724,7 @@ bool probResult(int probSetting){
  	if (probSetting == 0){
  		return false;
  	}
- 	if((rand() % 100) < probSetting){ // assumes probSetting is a range 0-100
+	if((rand() % 100) < probSetting){ // assumes probSetting is a range 0-100
  		return true;
  	} else {
  		return false;
@@ -2012,9 +2012,8 @@ void playNote(int patternNum) {
 		}		
 
 		// Queue note-on based on probability
-		if (probResult(stepNoteP[patternNum][seqPos[patternNum]].prob)){
-			pendingNoteOns.insert(stepNoteP[patternNum][seqPos[patternNum]].note, seq_velocity, PatternChannel(patternNum), noteon_micros, sendnoteCV );
-		}
+		pendingNoteOns.insert(stepNoteP[patternNum][seqPos[patternNum]].note, seq_velocity, PatternChannel(patternNum), noteon_micros, sendnoteCV );
+
 		// {notenum, vel, notelen, step_type, {p1,p2,p3,p4}, prob}
 		// send param locks 
 		for (int q=0; q<4; q++){	
